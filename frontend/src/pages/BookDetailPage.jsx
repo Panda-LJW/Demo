@@ -1,9 +1,24 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, User, Calendar, Clock, RotateCcw } from 'lucide-react';
-import { getBookById, borrowBook, returnBook } from '../api/client';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { BookOpen, CalendarDays, CheckCircle2, Clock3, RotateCcw, UserRound } from 'lucide-react';
+import { borrowBook, getBookById, returnBook } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import StatusChip from '../components/StatusChip';
+
+function formatDateTime(value) {
+  if (!value) return '—';
+  return new Date(value).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString('zh-CN');
+}
 
 export default function BookDetailPage() {
   const { id } = useParams();
@@ -12,82 +27,56 @@ export default function BookDetailPage() {
   const [book, setBook] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [toast, setToast] = useState('');
+
+  const fetchBook = async () => {
+    setIsLoading(true);
+    const response = await getBookById(id);
+    if (response.code === 0) {
+      setBook(response.data);
+    } else {
+      setToast(response.message);
+      setBook(null);
+    }
+    setIsLoading(false);
+  };
 
   useEffect(() => {
     fetchBook();
   }, [id]);
 
-  const fetchBook = async () => {
-    setIsLoading(true);
-    const res = await getBookById(id);
-    if (res.code === 0) {
-      setBook(res.data);
-    } else {
-      setMessage(res.message);
-    }
-    setIsLoading(false);
-  };
-
   const handleBorrow = async () => {
     setActionLoading(true);
-    setMessage('');
-    const res = await borrowBook(id);
-    if (res.code === 0) {
-      setMessage('借阅成功！请在 14 天内归还。');
-      await fetchBook();
-    } else {
-      setMessage(res.message);
-    }
+    const response = await borrowBook(id);
+    setToast(response.code === 0 ? '借阅成功，请在 14 天内归还' : response.message);
+    if (response.code === 0) await fetchBook();
     setActionLoading(false);
   };
 
   const handleReturn = async () => {
     setActionLoading(true);
-    setMessage('');
-    const res = await returnBook(id);
-    if (res.code === 0) {
-      setMessage('归还成功！');
-      await fetchBook();
-    } else {
-      setMessage(res.message);
-    }
+    const response = await returnBook(id);
+    setToast(response.code === 0 ? '归还成功，感谢及时分享' : response.message);
+    if (response.code === 0) await fetchBook();
     setActionLoading(false);
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('zh-CN');
-  };
-
-  const formatTime = (dateStr) => {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    return d.toLocaleString('zh-CN');
   };
 
   if (isLoading) {
     return (
-      <div className="container detail-page">
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>加载中...</p>
-        </div>
+      <div className="loading-state">
+        <div className="spinner"></div>
+        <p>正在翻到详情页...</p>
       </div>
     );
   }
 
   if (!book) {
     return (
-      <div className="container detail-page">
-        <div className="empty-state">
-          <p>{message || '图书不存在'}</p>
-          <Link to="/books" className="btn btn-secondary">
-            <ArrowLeft size={16} />
-            返回列表
-          </Link>
-        </div>
+      <div className="card empty-state">
+        <div className="empty-state-icon">404</div>
+        <h1 className="empty-state-title">图书不存在</h1>
+        <p className="empty-state-desc">{toast || '这本书可能已经被移出共享书架。'}</p>
+        <Link to="/books" className="btn btn-secondary btn-sm">返回列表</Link>
       </div>
     );
   }
@@ -98,119 +87,107 @@ export default function BookDetailPage() {
   const canReturn = book.status === 'borrowed' && isBorrower;
 
   return (
-    <div className="container detail-page fade-in">
-      {/* 返回按钮 */}
-      <button className="back-btn" onClick={() => navigate(-1)}>
-        <ArrowLeft size={18} />
-        返回
-      </button>
-
-      {/* 消息提示 */}
-      {message && (
-        <div className={`alert ${message.includes('成功') ? 'alert-success' : 'alert-error'}`}>
-          {message}
+    <div className="detail-page page-stack">
+      {toast && (
+        <div className={`toast toast-inline ${toast.includes('成功') ? 'toast-success' : ''}`}>
+          {toast.includes('成功') ? <CheckCircle2 size={16} /> : null}
+          {toast}
         </div>
       )}
 
-      <div className="detail-layout">
-        {/* 左侧：封面 */}
-        <div className="detail-cover">
+      <button className="back-link" type="button" onClick={() => navigate(-1)}>返回</button>
+
+      <section className="detail-grid">
+        <div className="detail-cover-card card">
           <img
             src={book.cover}
             alt={book.title}
-            onError={(e) => {
-              e.target.src = 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=300&h=400&fit=crop';
+            onError={(event) => {
+              event.currentTarget.style.display = 'none';
             }}
           />
+          <div className="detail-cover-fallback">
+            <BookOpen size={54} />
+          </div>
         </div>
 
-        {/* 右侧：信息 */}
-        <div className="detail-info">
-          <div className="detail-header">
-            <h1 className="detail-title">{book.title}</h1>
+        <article className="detail-panel card">
+          <div className="detail-heading">
+            <div>
+              <p className="eyebrow">{book.category}</p>
+              <h1>{book.title}</h1>
+              <p>{book.author}</p>
+            </div>
             <StatusChip status={book.status} />
           </div>
 
-          <p className="detail-author">
-            <BookOpen size={16} />
-            {book.author}
-          </p>
-
-          <p className="detail-publisher">
-            出版社：{book.publisher}
-          </p>
-
-          <div className="detail-owner">
-            <div className="owner-item">
-              <User size={16} />
-              <span>持有人：{book.owner?.name || '未知'}</span>
+          <div className="detail-facts">
+            <div>
+              <UserRound size={18} />
+              <span>持有人</span>
+              <strong>{book.owner?.name || '未知'}</strong>
             </div>
-            {book.borrower && (
-              <div className="owner-item">
-                <Calendar size={16} />
-                <span>
-                  借阅人：{book.borrower.name}
-                  {book.borrower.dueDate && (
-                    <span className="due-date">（归还截止：{formatDate(book.borrower.dueDate)}）</span>
-                  )}
-                </span>
-              </div>
-            )}
+            <div>
+              <BookOpen size={18} />
+              <span>出版社</span>
+              <strong>{book.publisher || '未填写'}</strong>
+            </div>
+            <div>
+              <CalendarDays size={18} />
+              <span>上架时间</span>
+              <strong>{formatDate(book.createdAt)}</strong>
+            </div>
           </div>
+
+          {book.borrower && (
+            <div className="borrow-note">
+              <Clock3 size={18} />
+              <span>{book.borrower.name} 正在借阅，应于 {formatDate(book.borrower.dueDate)} 前归还。</span>
+            </div>
+          )}
 
           <div className="detail-description">
-            <h3>简介</h3>
-            <p>{book.description}</p>
+            <h2>简介</h2>
+            <p>{book.description || '暂无简介。'}</p>
           </div>
 
-          {/* 操作按钮 */}
           <div className="detail-actions">
             {canBorrow && (
-              <button
-                className="btn btn-primary"
-                onClick={handleBorrow}
-                disabled={actionLoading}
-              >
-                {actionLoading ? '处理中...' : '申请借阅'}
+              <button className="btn btn-primary" type="button" onClick={handleBorrow} disabled={actionLoading}>
+                {actionLoading ? '提交中...' : '申请借阅'}
               </button>
             )}
             {canReturn && (
-              <button
-                className="btn btn-primary"
-                onClick={handleReturn}
-                disabled={actionLoading}
-              >
+              <button className="btn btn-success" type="button" onClick={handleReturn} disabled={actionLoading}>
                 <RotateCcw size={16} />
                 {actionLoading ? '处理中...' : '归还图书'}
               </button>
             )}
-            {isOwner && book.status === 'available' && (
-              <p className="action-hint">您是该书的持有人</p>
-            )}
+            {isOwner && <span className="action-copy">这是你捐赠的图书，仅可查看借阅状态。</span>}
+            {!canBorrow && !canReturn && !isOwner && <span className="action-copy">他人已借出，暂时只能查看详情。</span>}
           </div>
-        </div>
-      </div>
+        </article>
+      </section>
 
-      {/* 借阅历史 */}
-      {book.borrowHistory && book.borrowHistory.length > 0 && (
-        <div className="borrow-history fade-in">
-          <h3>
-            <Clock size={18} />
-            借阅历史
-          </h3>
-          <div className="history-list">
-            {book.borrowHistory.map((record, index) => (
-              <div key={index} className="history-item">
-                <div className="history-user">{record.userName}</div>
-                <div className={`history-action ${record.action}`}>
-                  {record.action === 'borrow' ? '借阅' : '归还'}
-                </div>
-                <div className="history-time">{formatTime(record.time)}</div>
-              </div>
-            ))}
-          </div>
+      <section className="card history-card">
+        <div className="section-head">
+          <h2>借阅历史</h2>
+          <span>{book.borrowHistory?.length || 0} 条记录</span>
         </div>
-      )}
+        {book.borrowHistory?.length ? (
+          <ul className="history-list">
+            {book.borrowHistory.map((item, index) => (
+              <li className="history-item" key={`${item.userId}-${item.time}-${index}`}>
+                <span className={`history-action ${item.action}`}>{item.action === 'borrow' ? '借阅' : '归还'}</span>
+                <span>{item.userName}</span>
+                <span className="history-time">{formatDateTime(item.time)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="empty-inline">暂无借阅历史，等待第一位读者。</div>
+        )}
+      </section>
     </div>
   );
 }

@@ -7,6 +7,10 @@ bun.lock
 
 # 忽略node_modules目录
 node_modules/
+frontend/node_modules/
+
+# 忽略前端构建产物
+frontend/dist/
 
 # 忽略所有.log文件
 *.log

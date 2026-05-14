@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { BookOpen, LogOut, User } from 'lucide-react';
+import { BookMarked, BookOpen, LogOut, PlusCircle, UserRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Layout({ children }) {
@@ -15,39 +15,46 @@ export default function Layout({ children }) {
   const isLoginPage = location.pathname === '/login';
   if (isLoginPage) return children;
 
+  const isActive = (path) => location.pathname === path;
+
   return (
     <div className="app-layout">
-      <header className="app-header">
-        <div className="container header-inner">
+      <header className="navbar">
+        <div className="navbar-inner">
           <Link to="/books" className="brand">
-            <BookOpen size={28} strokeWidth={2} />
-            <span>图书共享</span>
+            <span className="brand-mark">书</span>
+            <span>团队图书共享</span>
           </Link>
-          <nav className="nav-links">
-            <Link to="/books" className={location.pathname === '/books' ? 'active' : ''}>
-              图书列表
+          <nav className="navbar-nav" aria-label="主导航">
+            <Link to="/books" className={`navbar-link ${isActive('/books') ? 'active' : ''}`}>
+              <BookOpen size={16} />
+              <span>图书列表</span>
             </Link>
-            <Link to="/books/donate" className={location.pathname === '/books/donate' ? 'active' : ''}>
-              我要捐书
+            <Link to="/my-borrows" className={`navbar-link ${isActive('/my-borrows') ? 'active' : ''}`}>
+              <BookMarked size={16} />
+              <span>我的借阅</span>
+            </Link>
+            <Link to="/books/new" className={`navbar-link ${isActive('/books/new') ? 'active' : ''}`}>
+              <PlusCircle size={16} />
+              <span>我要捐书</span>
             </Link>
           </nav>
-          <div className="user-section">
+          <div className="navbar-user-area">
             {user && (
               <>
-                <div className="user-info">
-                  <User size={18} />
+                <div className="navbar-user">
+                  <span className="navbar-avatar">{user.name?.slice(0, 1) || <UserRound size={16} />}</span>
                   <span>{user.name}</span>
                 </div>
-                <button className="btn btn-secondary logout-btn" onClick={handleLogout}>
+                <button className="icon-btn logout-btn" onClick={handleLogout} title="退出登录" aria-label="退出登录">
                   <LogOut size={16} />
-                  <span>退出</span>
                 </button>
               </>
             )}
           </div>
         </div>
       </header>
-      <main className="app-main">
+      <main className="page-container">
         {children}
       </main>
     </div>

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, BookPlus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { BookPlus, Filter, Search, X } from 'lucide-react';
 import { getBooks } from '../api/client';
 import BookCard from '../components/BookCard';
 
@@ -20,9 +19,9 @@ export default function BooksPage() {
     if (keyword.trim()) params.keyword = keyword.trim();
     if (activeCategory !== '全部') params.category = activeCategory;
 
-    const res = await getBooks(params);
-    if (res.code === 0) {
-      setBooks(res.data.list);
+    const response = await getBooks(params);
+    if (response.code === 0) {
+      setBooks(response.data.list);
     }
     setIsLoading(false);
   }, [keyword, activeCategory]);
@@ -31,88 +30,108 @@ export default function BooksPage() {
     fetchBooks();
   }, [fetchBooks]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    const newParams = new URLSearchParams(searchParams);
-    if (keyword.trim()) newParams.set('keyword', keyword.trim());
-    else newParams.delete('keyword');
-    setSearchParams(newParams);
+  const syncSearchParams = (nextKeyword, nextCategory) => {
+    const next = new URLSearchParams();
+    if (nextKeyword.trim()) next.set('keyword', nextKeyword.trim());
+    if (nextCategory !== '全部') next.set('category', nextCategory);
+    setSearchParams(next);
+  };
+
+  const handleSearch = (event) => {
+    event.preventDefault();
+    syncSearchParams(keyword, activeCategory);
     fetchBooks();
   };
 
-  const handleCategoryChange = (cat) => {
-    setActiveCategory(cat);
-    const newParams = new URLSearchParams(searchParams);
-    if (cat !== '全部') newParams.set('category', cat);
-    else newParams.delete('category');
-    setSearchParams(newParams);
+  const handleClear = () => {
+    setKeyword('');
+    syncSearchParams('', activeCategory);
+  };
+
+  const handleCategoryChange = (category) => {
+    setActiveCategory(category);
+    syncSearchParams(keyword, category);
   };
 
   return (
-    <div className="books-page fade-in">
-      <div className="container">
-        {/* 页面头部 */}
-        <div className="page-header">
-          <h2>图书列表</h2>
-          <Link to="/books/donate" className="btn btn-primary donate-btn">
-            <BookPlus size={18} />
-            我要捐书
-          </Link>
+    <div className="books-page page-stack">
+      <section className="page-hero">
+        <div>
+          <p className="eyebrow">Library Catalog</p>
+          <h1 className="page-title">图书列表</h1>
+          <p className="page-desc">搜索、筛选并查看团队成员共享的图书，可借图书可以直接进入详情申请借阅。</p>
         </div>
+        <Link to="/books/new" className="btn btn-accent">
+          <BookPlus size={18} />
+          我要捐书
+        </Link>
+      </section>
 
-        {/* 搜索栏 */}
+      <section className="toolbar-card card">
         <form className="search-bar" onSubmit={handleSearch}>
-          <Search size={20} className="search-icon" />
+          <Search className="search-bar-icon" size={18} />
           <input
+            className="form-input"
             type="text"
             placeholder="搜索书名或作者..."
             value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+            onChange={(event) => setKeyword(event.target.value)}
           />
-          <button type="submit" className="btn btn-primary search-btn">
-            搜索
+          <button
+            className={`search-bar-clear ${keyword ? 'visible' : ''}`}
+            type="button"
+            onClick={handleClear}
+            aria-label="清空搜索"
+          >
+            <X size={15} />
           </button>
         </form>
 
-        {/* 分类筛选 */}
-        <div className="category-filter">
-          <Filter size={16} />
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              className={`category-btn ${activeCategory === cat ? 'active' : ''}`}
-              onClick={() => handleCategoryChange(cat)}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* 结果统计 */}
-        <div className="result-count">
-          共找到 <strong>{books.length}</strong> 本图书
-        </div>
-
-        {/* 图书网格 */}
-        {isLoading ? (
-          <div className="loading-state">
-            <div className="spinner"></div>
-            <p>加载中...</p>
-          </div>
-        ) : books.length === 0 ? (
-          <div className="empty-state">
-            <BookPlus size={48} strokeWidth={1} />
-            <p>暂无图书</p>
-            <p className="empty-hint">试试其他搜索条件，或者成为第一位捐书人</p>
-          </div>
-        ) : (
-          <div className="books-grid">
-            {books.map((book) => (
-              <BookCard key={book.id} book={book} />
+        <div className="filter-group">
+          <span className="filter-label">
+            <Filter size={16} />
+            分类
+          </span>
+          <div className="filter-tabs">
+            {categories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                className={`filter-tab ${activeCategory === category ? 'active' : ''}`}
+                onClick={() => handleCategoryChange(category)}
+              >
+                {category}
+              </button>
             ))}
           </div>
-        )}
+        </div>
+      </section>
+
+      <div className="list-summary">
+        <span>共找到</span>
+        <strong>{books.length}</strong>
+        <span>本图书</span>
       </div>
+
+      {isLoading ? (
+        <div className="loading-state">
+          <div className="spinner"></div>
+          <p>正在整理书架...</p>
+        </div>
+      ) : books.length === 0 ? (
+        <div className="card empty-state">
+          <div className="empty-state-icon">📚</div>
+          <h2 className="empty-state-title">没有找到相关图书</h2>
+          <p className="empty-state-desc">换个关键词，或去捐书页添加一本新的团队藏书。</p>
+          <Link to="/books/new" className="btn btn-accent btn-sm">我要捐书</Link>
+        </div>
+      ) : (
+        <section className="book-grid">
+          {books.map((book) => (
+            <BookCard key={book.id} book={book} />
+          ))}
+        </section>
+      )}
     </div>
   );
 }

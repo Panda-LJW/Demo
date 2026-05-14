@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import BooksPage from './pages/BooksPage';
 import BookDetailPage from './pages/BookDetailPage';
 import DonateBookPage from './pages/DonateBookPage';
+import MyBorrowsPage from './pages/MyBorrowsPage';
 
 function RequireAuth({ children }) {
   const { isLoggedIn } = useAuth();
@@ -34,9 +35,21 @@ function AppRoutes() {
         />
         <Route
           path="/books/donate"
+          element={<Navigate to="/books/new" replace />}
+        />
+        <Route
+          path="/books/new"
           element={
             <RequireAuth>
               <DonateBookPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/my-borrows"
+          element={
+            <RequireAuth>
+              <MyBorrowsPage />
             </RequireAuth>
           }
         />

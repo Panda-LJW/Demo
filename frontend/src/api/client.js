@@ -193,6 +193,7 @@ export async function returnBook(id) {
 
   book.status = 'available';
   book.borrowerId = null;
+  book.borrowedAt = null;
   book.dueDate = null;
 
   book.borrowHistory.push({
@@ -203,4 +204,55 @@ export async function returnBook(id) {
   });
 
   return success({ returnedAt: nowIso });
+}
+
+export async function getMyBorrows() {
+  await delay();
+  checkAuth();
+
+  const list = mockBooks.flatMap((book) => {
+    const records = [];
+
+    if (book.borrowerId === currentUser.id && book.borrowedAt) {
+      records.push({
+        borrowId: Number(`${book.id}${currentUser.id}`),
+        book: {
+          id: book.id,
+          title: book.title,
+          cover: book.cover,
+        },
+        borrowedAt: book.borrowedAt,
+        dueDate: book.dueDate,
+        returnedAt: null,
+        status: 'borrowing',
+      });
+    }
+
+    book.borrowHistory.forEach((entry, index) => {
+      if (entry.userId !== currentUser.id || entry.action !== 'borrow') return;
+      const returnEntry = book.borrowHistory.slice(index + 1).find(
+        item => item.userId === currentUser.id && item.action === 'return'
+      );
+      if (!returnEntry) return;
+
+      const borrowedAt = entry.time;
+      const dueDate = new Date(new Date(borrowedAt).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
+      records.push({
+        borrowId: Number(`${book.id}${currentUser.id}${index}`),
+        book: {
+          id: book.id,
+          title: book.title,
+          cover: book.cover,
+        },
+        borrowedAt,
+        dueDate,
+        returnedAt: returnEntry.time,
+        status: 'returned',
+      });
+    });
+
+    return records;
+  }).sort((a, b) => new Date(b.borrowedAt) - new Date(a.borrowedAt));
+
+  return success({ list, total: list.length });
 }
