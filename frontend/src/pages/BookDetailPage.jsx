@@ -4,6 +4,7 @@ import { BookOpen, CalendarDays, CheckCircle2, Clock3, RotateCcw, UserRound } fr
 import { borrowBook, getBookById, returnBook } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import StatusChip from '../components/StatusChip';
+import { getBookCover } from '../utils/bookCovers';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -100,7 +101,7 @@ export default function BookDetailPage() {
       <section className="detail-grid">
         <div className="detail-cover-card card">
           <img
-            src={book.cover}
+            src={getBookCover(book)}
             alt={book.title}
             onError={(event) => {
               event.currentTarget.style.display = 'none';

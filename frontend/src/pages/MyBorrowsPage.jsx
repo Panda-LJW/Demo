@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { BookOpen, CalendarClock, CircleCheck, Clock } from 'lucide-react';
 import { getMyBorrows } from '../api/client';
 import StatusChip from '../components/StatusChip';
+import { getBookCover } from '../utils/bookCovers';
 
 function formatDate(value) {
   if (!value) return '—';
@@ -107,7 +108,7 @@ export default function MyBorrowsPage() {
               <Link className="borrow-row" to={`/books/${item.book.id}`} key={item.borrowId}>
                 <span className="borrow-book">
                   <span className="borrow-cover">
-                    {item.book.cover ? <img src={item.book.cover} alt="" /> : <BookOpen size={20} />}
+                    {getBookCover(item.book) ? <img src={getBookCover(item.book)} alt="" /> : <BookOpen size={20} />}
                   </span>
                   <strong>{item.book.title}</strong>
                 </span>
